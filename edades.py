@@ -1,8 +1,5 @@
 import pandas as pd
-import numpy as np
 import re
-import seaborn as sns
-import math
 import matplotlib.pyplot as plt
 import squarify
 
@@ -19,7 +16,7 @@ def normaliza_edad(p, normalize=None):
         if s.__class__ == float: #si es un Nan
             return 0
         if (mo := re.match("^>(.*)", s)) != None: #Si es >89
-            return int(mo.group(1))
+            return int(90)
         else:
             n = int(s)
             if normalize!=None:
@@ -46,5 +43,6 @@ def plot_by_age(p):
     plt.show()
 
 
-patient = normaliza_edad(patient)
-plot_by_age(patient)
+def __main__():
+    patient = normaliza_edad(patient)
+    plot_by_age(patient)

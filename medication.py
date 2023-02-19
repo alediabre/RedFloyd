@@ -1,19 +1,70 @@
 import pandas as pd
-import numpy as np
 import re
-import seaborn as sns
-import matplotlib.pyplot as plt
+import math
 import drugstandards as drugs
 
 
+def standard_infusiondrugnames(df): #infusiondrug -> stdrugname, stinfusionrate
 
-medication = pd.read_csv('./eicu-collaborative-research-database-demo-2.0.1/medication.csv.gz', compression='gzip')
+    def parse_drug(s):
+
+        if s.count("(")==1:
+            ss = s.split("(")
+            r = ss[0].strip()
+            medida = ss[1][:-1]
+        elif s.count("(")==2:
+            ss = s.split(")")[1].split("(")
+            r = ss[0].strip()
+            medida = ss[1][:-1]
+        else:
+            r = s
+            medida = None
+
+        return r,medida
+
+    l = df["drugname"].apply(lambda s : parse_drug(s)).tolist()
+    drugs = [i for i,_ in l]
+    medidas = [j for _,j in l]
+    drugrate = df["drugrate"].values.tolist()
+
+    stdrugrate = []
+    for i in range(len(drugrate)):
+        m,drate = medidas[i],drugrate[i]
+        if m == None:
+            m = ""
+        if drate == "ERROR":
+            drate = float(0)
+        else:    
+            drate = float(drate)        
+            if "mcg" in m:
+                drate = drate/1000
+            if "min" in m:
+                drate = drate*60
+        stdrugrate.append(drate)
+
+    df["stdrugname"] = pd.Series(drugs)
+    df["stdrugrate"] = pd.Series(stdrugrate)
+
+    return df
 
 
-medication=medication[:200]
+def infusionstop (df):
 
+    def calcula_fin(row):
+        infr = float(row.infusionrate)
+        vol = float(row.volumeoffluid)
+        if math.isnan(infr) or math.isnan(vol) or infr==0:
+            return row.infusionoffset
+        else:
+            n = math.floor((float(row.volumeoffluid) / infr)*60)
+            return int(n) + row.infusionoffset
+            
+    df["infusionendoffset"] = df.apply(lambda row: calcula_fin(row), axis=1)
+    return df
 
-def standard_drugnames(df, threshold=0.8):
+#-------------------------------------------------------------------------------------------------
+
+def standard_drugnames(df, threshold=0.8): #medication -> standarddrugname
 
     def abrevia_drug(s):
         if s.__class__ == float:
@@ -28,7 +79,3 @@ def standard_drugnames(df, threshold=0.8):
     df["standarddrugname"] = pd.Series(lista)
 
     return df
-
-
-m = standard_drugnames(medication)
-print(m.loc[:,["drugname","standarddrugname"]])
